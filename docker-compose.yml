@@ -1,1 +1,54 @@
+version: '3.9'
 
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ${DOCKERFILE:-Dockerfile.cpu}  # Default CPU
+    container_name: visiondrive_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/visiondrive
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend/models:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    runtime: ${RUNTIME:-runc}
+    networks:
+      - visiondrive_net
+
+  analytics:
+    build: ./analytics
+    container_name: visiondrive_analytics
+    ports:
+      - "8501:8501"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/visiondrive
+    depends_on:
+      - mongo
+    networks:
+      - visiondrive_net
+
+  mongo:
+    image: mongo:latest
+    container_name: visiondrive_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - visiondrive_net
+
+volumes:
+  mongo_data:
+
+networks:
+  visiondrive_net:
+    driver: bridge
