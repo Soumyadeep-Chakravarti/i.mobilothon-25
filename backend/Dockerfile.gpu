@@ -1,20 +1,59 @@
-# ===========================================
-# VisionDrive Backend - GPU (for Linux CUDA)
-# ===========================================
+# Dockerfile.gpu
 
-FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+# ----------------------------------------------------------------------
+# STAGE 1: BUILDER (Heavy lifting - PyTorch/FastAPI compilation)
+# Use a full CUDA image with Python for compilation stability.
+# The 'devel' tag is suitable as it includes compilers (build-essential equivalents).
+# ----------------------------------------------------------------------
+FROM nvidia/cuda:12.3.2-devel-ubuntu22.04 AS builder
 
-RUN apt-get update && apt-get install -y \
-    python3 python3-pip python3-dev git ffmpeg libsm6 libxext6 libgl1-mesa-glx wget curl \
+# Install Python and pip (NVIDIA images often come with a base Python, but installing
+# the full version ensures environment consistency and modern pip).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 python3.12-dev python3-pip \
+    # Install minimal runtime libraries that might be missing or conflict with PyTorch needs
+    ffmpeg libsm6 libxext6 libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up the working directory and install the application dependencies.
+WORKDIR /app
+
+# Install PyTorch and other dependencies from requirements.txt.
+# Ensure your requirements.txt specifies the correct CUDA-enabled PyTorch version (e.g., torch==2.x.x+cu121).
+COPY app/requirements-gpu.txt .
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements-gpu.txt \
+    && rm -rf /root/.cache/pip
+
+# ----------------------------------------------------------------------
+# STAGE 2: FINAL (Runtime - Minimalist environment for deployment)
+# Use the corresponding 'runtime' CUDA image for the smallest footprint.
+# This image contains the CUDA runtime libraries but not the build tools.
+# ----------------------------------------------------------------------
+FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04 AS final
+
+# Re-install Python and minimal system dependencies needed for runtime only.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 python3.12-venv python3-pip \
+    ffmpeg libsm6 libxext6 libgl1 \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY app/requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+# 1. Copy over the compiled Python packages from the builder stage.
+COPY --from=builder /usr/local/lib/python3.12/dist-packages /usr/local/lib/python3.12/dist-packages
+# Note: The path is often /usr/local/lib/python3.12/dist-packages on Ubuntu-based images.
+COPY --from=builder /usr/local/bin /usr/local/bin
 
+# 2. Copy the application source code and models.
 COPY app/src ./src
-COPY models ./models
+COPY models/ ./models/
 
-EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 3. Create a non-root user for security.
+RUN useradd -m appuser
+USER appuser
+
+# 4. Set the entry point (Adjust this to your actual FastAPI startup command)
+# This typically uses uvicorn or gunicorn.
+CMD ["python3.12", "src/main.py"]

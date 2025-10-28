@@ -1,0 +1,18 @@
+# Backend (FastAPI, MongoDB)
+fastapi
+uvicorn[standard]
+pydantic
+pymongo
+
+# Core ML/CV Libraries - CPU OPTIMIZED
+# **CRITICAL**: Use torch (CPU only) for the CPU build.
+torch
+torchvision
+
+# Computer Vision & Data
+# **CRITICAL**: Use the HEADLESS version of OpenCV for minimal size.
+opencv-python-headless
+dlib
+scipy
+numpy
+pandas

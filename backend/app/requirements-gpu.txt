@@ -1,0 +1,18 @@
+# Backend (FastAPI, MongoDB)
+fastapi
+uvicorn[standard]
+pydantic
+pymongo
+
+# Core ML/CV Libraries - GPU OPTIMIZED
+# **CRITICAL**: Use the CUDA version that matches your NVIDIA base image (e.g., CUDA 12.1).
+# You must look up the exact package name on PyPI/PyTorch website for the current version.
+torch==2.3.0+cu121  # Example: Replace with the actual PyTorch version for your CUDA base
+torchvision==0.18.0+cu121
+
+# Computer Vision & Data
+opencv-python-headless
+dlib
+scipy
+numpy
+pandas

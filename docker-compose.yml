@@ -1,10 +1,9 @@
-version: '3.9'
-
 services:
   backend:
     build:
       context: ./backend
-      dockerfile: ${DOCKERFILE:-Dockerfile.cpu}  # Default CPU
+      # Keep the CPU default
+      dockerfile: ${DOCKERFILE:-Dockerfile.cpu} 
     container_name: visiondrive_backend
     ports:
       - "8000:8000"
@@ -12,14 +11,19 @@ services:
       - MONGO_URI=mongodb://mongo:27017/visiondrive
     depends_on:
       - mongo
-    volumes:
-      - ./backend/models:/app/models
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
-    runtime: ${RUNTIME:-runc}
+    # Remove volume mount if models are static and copied in the Dockerfile
+    # volumes:
+    #   - ./backend/models:/app/models 
+    
+    # CRITICAL FIX: Remove GPU-related configuration for a CPU-default build
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+    # runtime: ${RUNTIME:-runc}
+    
+    # Keep the default runtime (runc) implicitly by removing the 'runtime' field
     networks:
       - visiondrive_net
 
@@ -36,7 +40,8 @@ services:
       - visiondrive_net
 
   mongo:
-    image: mongo:latest
+    # BEST PRACTICE: Pin the MongoDB version
+    image: mongo:7 # Example of pinning to a major version
     container_name: visiondrive_mongo
     restart: always
     ports:
