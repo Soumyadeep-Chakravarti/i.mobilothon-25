@@ -1,59 +1,95 @@
 # Dockerfile.gpu
 
 # ----------------------------------------------------------------------
-# STAGE 1: BUILDER (Heavy lifting - PyTorch/FastAPI compilation)
-# Use a full CUDA image with Python for compilation stability.
-# The 'devel' tag is suitable as it includes compilers (build-essential equivalents).
+# BACKEND DOCKERFILE (GPU VERSION)
+# Version: v1.4
 # ----------------------------------------------------------------------
-FROM nvidia/cuda:12.3.2-devel-ubuntu22.04 AS builder
+# Context:
+#   - FastAPI backend with GPU-accelerated ML/CV tasks
+#   - MongoDB (async), Celery + Redis integration
+#   - Torch/TorchVision with CUDA runtime
+#   - Fully aligned with Dockerfile.cpu for consistency
+# ----------------------------------------------------------------------
 
-# Install Python and pip (NVIDIA images often come with a base Python, but installing
-# the full version ensures environment consistency and modern pip).
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 python3.12-dev python3-pip \
-    # Install minimal runtime libraries that might be missing or conflict with PyTorch needs
-    ffmpeg libsm6 libxext6 libgl1 \
-    && rm -rf /var/lib/apt/lists/*
+# ======================================================================
+# STAGE 1: BUILDER
+# ======================================================================
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04 AS builder
 
-# Set up the working directory and install the application dependencies.
+LABEL maintainer="Team Alpha <team@projectdomain.com>" \
+      version="v1.4" \
+      description="Backend GPU Build - FastAPI + MongoDB + Celery + Redis (CUDA Accelerated)"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Install PyTorch and other dependencies from requirements.txt.
-# Ensure your requirements.txt specifies the correct CUDA-enabled PyTorch version (e.g., torch==2.x.x+cu121).
-COPY app/requirements-gpu.txt .
-RUN pip install --upgrade pip setuptools wheel \
+# ----------------------------------------------------------------------
+# 1️⃣ Install System Dependencies (Compilation, ML libs, etc.)
+# ----------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-dev python3-venv \
+    build-essential git wget curl ffmpeg \
+    libsm6 libxext6 libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ----------------------------------------------------------------------
+# 2️⃣ Install Python Dependencies
+# ----------------------------------------------------------------------
+COPY app/requirements-gpu.txt ./requirements-gpu.txt
+
+RUN python3 -m pip install --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r requirements-gpu.txt \
     && rm -rf /root/.cache/pip
 
 # ----------------------------------------------------------------------
-# STAGE 2: FINAL (Runtime - Minimalist environment for deployment)
-# Use the corresponding 'runtime' CUDA image for the smallest footprint.
-# This image contains the CUDA runtime libraries but not the build tools.
+# STAGE 2: FINAL RUNTIME IMAGE
+# Minimal runtime built from CUDA base for GPU inference
 # ----------------------------------------------------------------------
-FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04 AS final
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04 AS final
 
-# Re-install Python and minimal system dependencies needed for runtime only.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 python3.12-venv python3-pip \
-    ffmpeg libsm6 libxext6 libgl1 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/home/appuser/.local/bin:$PATH"
 
 WORKDIR /app
 
-# 1. Copy over the compiled Python packages from the builder stage.
-COPY --from=builder /usr/local/lib/python3.12/dist-packages /usr/local/lib/python3.12/dist-packages
-# Note: The path is often /usr/local/lib/python3.12/dist-packages on Ubuntu-based images.
+# ----------------------------------------------------------------------
+# 3️⃣ Install only runtime dependencies (minimal footprint)
+# ----------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip ffmpeg libsm6 libxext6 libgl1 curl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ----------------------------------------------------------------------
+# 4️⃣ Copy installed Python dependencies and binaries from builder
+# ----------------------------------------------------------------------
+COPY --from=builder /usr/local/lib/python3.*/site-packages /usr/local/lib/python3.*/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# 2. Copy the application source code and models.
+# ----------------------------------------------------------------------
+# 5️⃣ Copy the application code, models, and entrypoint
+# ----------------------------------------------------------------------
 COPY app/src ./src
 COPY models/ ./models/
+COPY app/docker-entrypoint.sh .
 
-# 3. Create a non-root user for security.
+RUN chmod +x docker-entrypoint.sh
+
+# ----------------------------------------------------------------------
+# 6️⃣ Security: Create non-root user
+# ----------------------------------------------------------------------
 RUN useradd -m appuser
 USER appuser
 
-# 4. Set the entry point (Adjust this to your actual FastAPI startup command)
-# This typically uses uvicorn or gunicorn.
-CMD ["python3.12", "src/main.py"]
+# ----------------------------------------------------------------------
+# 7️⃣ Healthcheck (Operational observability)
+# ----------------------------------------------------------------------
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8000/health/liveness || exit 1
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["web"]
+

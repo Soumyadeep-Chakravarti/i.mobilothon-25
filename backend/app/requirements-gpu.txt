@@ -1,18 +1,125 @@
-# Backend (FastAPI, MongoDB)
+# backend/app/requirements-gpu.txt
+
+# ----------------------------------------------------------------------
+# PROJECT REQUIREMENTS - BACKEND (GPU VERSION)
+# Version: v1.4
+# ----------------------------------------------------------------------
+# Context:
+#   - FastAPI backend serving core APIs
+#   - MongoDB for NoSQL data persistence (async)
+#   - Celery + Redis for background processing
+#   - Torch/OpenCV for GPU-accelerated ML & CV inference
+#   - Designed for containerization & CUDA environments
+# ----------------------------------------------------------------------
+
+
+# ======================================================================
+# 1️⃣ CORE BACKEND FRAMEWORK
+# ======================================================================
+
+# FastAPI - Modern, async web framework for APIs
 fastapi
+
+# Uvicorn - ASGI server to run FastAPI (standard build includes useful extras)
 uvicorn[standard]
+
+# Pydantic - Data validation and schema management
 pydantic
+
+# Robust environment variable & configuration management
+pydantic-settings
+
+# Support for handling form data and file uploads
+python-multipart
+
+# Secure JSON Web Tokens (JWT) for authentication
+python-jose[cryptography]
+
+
+# ======================================================================
+# 2️⃣ DATA LAYER - ASYNCHRONOUS MONGODB
+# ======================================================================
+
+# Motor - Asynchronous MongoDB driver (preferred for async performance)
+motor
+
+# Beanie - Async ODM (Object Document Mapper) using Pydantic models
+beanie
+
+# PyMongo - Included for compatibility with legacy or sync operations
 pymongo
 
-# Core ML/CV Libraries - GPU OPTIMIZED
-# **CRITICAL**: Use the CUDA version that matches your NVIDIA base image (e.g., CUDA 12.1).
-# You must look up the exact package name on PyPI/PyTorch website for the current version.
-torch==2.3.0+cu121  # Example: Replace with the actual PyTorch version for your CUDA base
-torchvision==0.18.0+cu121
 
-# Computer Vision & Data
+# ======================================================================
+# 3️⃣ ASYNCHRONOUS TASK PROCESSING
+# ======================================================================
+
+# Celery - Distributed task queue for background & scheduled jobs
+celery
+
+# Redis - Lightweight in-memory data store (used as broker & result backend)
+redis
+
+
+# ======================================================================
+# 4️⃣ CORE ML / CV LIBRARIES (GPU OPTIMIZED)
+# ======================================================================
+
+# Torch (GPU build) - choose appropriate CUDA toolkit version
+# Options:
+#   torch==<version>+cu118  (CUDA 11.8)
+#   torch==<version>+cu121  (CUDA 12.1)
+# Check: https://pytorch.org/get-started/locally/
+torch
+
+# TorchVision - Model utilities, transforms, pretrained CNNs
+torchvision
+
+# OpenCV (Headless) - GPU accelerated if compiled with CUDA (use custom build if needed)
 opencv-python-headless
+
+# dlib - GPU acceleration for face detection & recognition (requires CUDA at build)
 dlib
+
+# Scientific & Data stack
 scipy
 numpy
 pandas
+
+
+# ======================================================================
+# 5️⃣ UTILITIES & SUPPORT LIBRARIES
+# ======================================================================
+
+# Logging & Developer Tools
+rich
+loguru
+
+# Async HTTP client for inter-service communication
+httpx
+
+# Environment file support (optional if using pydantic-settings)
+python-dotenv
+
+# Async file operations
+aiofiles
+
+# Progress visualization for training & background jobs
+tqdm
+
+
+# ======================================================================
+# 6️⃣ GPU UTILITIES & MONITORING (Optional but Recommended)
+# ======================================================================
+
+# NVIDIA Management Library - monitor GPU usage and stats
+nvidia-ml-py3
+
+# GPUtil - lightweight wrapper for GPU status queries
+gputil
+
+
+# ======================================================================
+# END OF REQUIREMENTS
+# ======================================================================
+

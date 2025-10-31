@@ -1,18 +1,114 @@
-# Backend (FastAPI, MongoDB)
+# backend/app/requirements-cpu.txt
+
+# ----------------------------------------------------------------------
+# PROJECT REQUIREMENTS - BACKEND (CPU VERSION)
+# Version: v1.4
+# ----------------------------------------------------------------------
+# Context:
+#   - FastAPI backend serving core APIs
+#   - MongoDB for NoSQL data persistence (async)
+#   - Celery + Redis for background processing
+#   - Torch/OpenCV for CPU-only ML & CV inference
+#   - Designed for containerization & reproducibility
+# ----------------------------------------------------------------------
+
+
+# ======================================================================
+# 1️⃣ CORE BACKEND FRAMEWORK
+# ======================================================================
+
+# FastAPI - Modern, async web framework for APIs
 fastapi
+
+# Uvicorn - ASGI server to run FastAPI (standard build includes useful extras)
 uvicorn[standard]
+
+# Pydantic - Data validation and schema management
 pydantic
+
+# Robust environment variable & configuration management
+pydantic-settings
+
+# Support for handling form data and file uploads
+python-multipart
+
+# Secure JSON Web Tokens (JWT) for authentication
+python-jose[cryptography]
+
+
+# ======================================================================
+# 2️⃣ DATA LAYER - ASYNCHRONOUS MONGODB
+# ======================================================================
+
+# Motor - Asynchronous MongoDB driver (preferred for async performance)
+motor
+
+# Beanie - Async ODM (Object Document Mapper) using Pydantic models
+beanie
+
+# PyMongo - Included for compatibility with legacy or sync operations
 pymongo
 
-# Core ML/CV Libraries - CPU OPTIMIZED
-# **CRITICAL**: Use torch (CPU only) for the CPU build.
+
+# ======================================================================
+# 3️⃣ ASYNCHRONOUS TASK PROCESSING
+# ======================================================================
+
+# Celery - Distributed task queue for background & scheduled jobs
+celery
+
+# Redis - Lightweight in-memory data store (used as broker & result backend)
+redis
+
+
+# ======================================================================
+# 4️⃣ CORE ML / CV LIBRARIES (CPU OPTIMIZED)
+# ======================================================================
+
+# Torch - CPU-only version for model inference
 torch
+
+# TorchVision - Model utilities, transforms, and pretrained networks
 torchvision
 
-# Computer Vision & Data
-# **CRITICAL**: Use the HEADLESS version of OpenCV for minimal size.
+# OpenCV (Headless) - Computer vision, no GUI overhead for server use
 opencv-python-headless
+
+# dlib - Facial recognition, feature extraction, object tracking
 dlib
+
+# Scientific stack
 scipy
 numpy
 pandas
+
+
+# ======================================================================
+# 5️⃣ UTILITIES & SUPPORT LIBRARIES
+# ======================================================================
+
+# Logging, monitoring, and utility helpers
+
+# Rich - Rich text formatting & logging in terminal (beautiful tracebacks)
+rich
+
+# Loguru - Elegant logging framework (optional but recommended)
+loguru
+
+# HTTPX - Async HTTP client for internal/external API calls
+httpx
+
+# python-dotenv - Lightweight .env file loader (backup if not using pydantic-settings)
+python-dotenv
+
+# aiofiles - Async file I/O handling (upload/download pipelines)
+aiofiles
+
+# tqdm - Progress bars for long-running or background tasks
+tqdm
+
+
+# ======================================================================
+# END OF REQUIREMENTS
+# ======================================================================
+
